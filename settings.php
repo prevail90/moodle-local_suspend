@@ -17,17 +17,10 @@
 defined('MOODLE_INTERNAL') || die();
 
 if ($hassiteconfig) {
-    $settings = new admin_settingpage('local_suspend', get_string('pluginname', 'local_suspend'));
-
-    if ($ADMIN->fulltree) {
-        $settings->add(new admin_setting_configtextarea(
-            'local_suspend/excludedcourses',
-            get_string('excludedcourses', 'local_suspend'),
-            get_string('excludedcourses_desc', 'local_suspend'),
-            '',
-            PARAM_RAW_TRIMMED
-        ));
-    }
-
-    $ADMIN->add('localplugins', $settings);
+    $ADMIN->add('localplugins', new admin_externalpage(
+        'local_suspend_manage',
+        get_string('manageexclusions', 'local_suspend'),
+        new moodle_url('/local/suspend/manage.php'),
+        'moodle/site:config'
+    ));
 }

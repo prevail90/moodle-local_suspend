@@ -23,6 +23,21 @@
  */
 
 $string['pluginname'] = 'Suspend completed students';
-$string['excludedcourses'] = 'Excluded course IDs';
-$string['excludedcourses_desc'] = 'Comma-separated or whitespace-separated list of course IDs that should never be processed by automatic suspension.';
+$string['certificatecourses'] = 'Courses with certificate requirement';
+$string['coursecompletiononlycourses'] = 'Courses using course completion only';
+$string['courseid'] = 'Course ID';
+$string['courseshortname'] = 'Short name';
+$string['excludedcourses'] = 'Excluded courses';
+$string['excludedcourses_help'] = 'Select the courses that should never be processed by automatic suspension.';
+$string['excludedcoursescount'] = 'Excluded courses';
+$string['excludedcourselist'] = 'Excluded courses';
+$string['manageexclusions'] = 'Manage excluded courses';
+$string['manageexclusions_desc'] = 'Choose the courses that should never be processed by automatic suspension. The overview below shows how the plugin currently categorises courses.';
+$string['noexcludedcourses'] = 'No courses are currently excluded.';
+$string['overview'] = 'Overview';
+$string['processingmode'] = 'Would normally process as';
+$string['processingmode_certificate'] = 'Certificate completion required';
+$string['processingmode_completion'] = 'Course completion only';
 $string['privacy:metadata'] = 'The local_suspend plugin does not store any personal data.';
+$string['settingsintro'] = 'Use the management page to pick excluded courses with autocomplete and review how the plugin will process current courses.';
+$string['totalcourses'] = 'Total courses';

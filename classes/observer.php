@@ -26,9 +26,6 @@ defined('MOODLE_INTERNAL') || die();
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class observer {
-    /** @var string[] Course modules treated as certificate activities. */
-    private const CERTIFICATE_MODULES = ['customcert', 'certificate'];
-
     /**
      * Suspends a completed student's enrolments in the completed course.
      *
@@ -39,7 +36,7 @@ class observer {
         $courseid = (int)($event->courseid ?? ($event->other['courseid'] ?? 0));
         $userid = (int)($event->relateduserid ?? ($event->other['relateduserid'] ?? $event->userid));
 
-        if (!$courseid || !$userid || self::is_course_excluded($courseid)) {
+        if (!$courseid || !$userid || manager::is_course_excluded($courseid)) {
             return;
         }
 
@@ -74,7 +71,7 @@ class observer {
         }
 
         [, $cm] = get_course_and_cm_from_cmid($cmcompletion->coursemoduleid);
-        if (self::is_course_excluded($cm->course) || !in_array($cm->modname, self::CERTIFICATE_MODULES, true)) {
+        if (manager::is_course_excluded($cm->course) || !in_array($cm->modname, manager::CERTIFICATE_MODULES, true)) {
             return;
         }
 
@@ -105,7 +102,7 @@ class observer {
         $foundcertificate = false;
 
         foreach ($modinfo->get_cms() as $cm) {
-            if (!in_array($cm->modname, self::CERTIFICATE_MODULES, true)) {
+            if (!in_array($cm->modname, manager::CERTIFICATE_MODULES, true)) {
                 continue;
             }
 
@@ -140,26 +137,6 @@ class observer {
         ], 'timecompleted', IGNORE_MISSING);
 
         return !empty($completion->timecompleted);
-    }
-
-    /**
-     * Checks whether the course is excluded from automatic suspension.
-     *
-     * @param int $courseid
-     * @return bool
-     */
-    private static function is_course_excluded(int $courseid): bool {
-        $configured = (string)get_config('local_suspend', 'excludedcourses');
-        if ($configured === '') {
-            return false;
-        }
-
-        $courseids = preg_split('/[\s,]+/', trim($configured), -1, PREG_SPLIT_NO_EMPTY);
-        if (!$courseids) {
-            return false;
-        }
-
-        return in_array((string)$courseid, $courseids, true);
     }
 
     /**

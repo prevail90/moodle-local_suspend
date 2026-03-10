@@ -19,8 +19,8 @@ Automatically suspends a student's enrolment in a course when the student comple
 ## Settings
 
 - Go to Site administration > Plugins > Local plugins > Suspend completed students.
-- Use `Excluded course IDs` to list course IDs that should be ignored by this plugin.
-- The field accepts commas, spaces, or new lines between IDs.
+- Open `Manage excluded courses` to choose excluded courses with autocomplete instead of entering raw IDs.
+- The management page also shows a small overview of how many courses currently use certificate completion, course completion only, and how many are excluded.
 
 ## Notes
 

@@ -14,18 +14,36 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+namespace local_suspend\form;
+
+defined('MOODLE_INTERNAL') || die();
+
+require_once($CFG->libdir . '/formslib.php');
+
 /**
- * Plugin version details.
+ * Form for managing excluded courses.
  *
  * @package    local_suspend
  * @copyright  2026
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+class exclusions_form extends \moodleform {
+    /**
+     * Form definition.
+     *
+     * @return void
+     */
+    public function definition(): void {
+        $mform = $this->_form;
+        $courseoptions = $this->_customdata['courseoptions'] ?? [];
 
-defined('MOODLE_INTERNAL') || die();
+        $mform->addElement('autocomplete', 'excludedcourses',
+            get_string('excludedcourses', 'local_suspend'),
+            $courseoptions,
+            ['multiple' => true]
+        );
+        $mform->addHelpButton('excludedcourses', 'excludedcourses', 'local_suspend');
 
-$plugin->component = 'local_suspend';
-$plugin->version = 2026031100;
-$plugin->requires = 2022112800;
-$plugin->maturity = MATURITY_ALPHA;
-$plugin->release = '0.4.0';
+        $this->add_action_buttons(false, get_string('savechanges'));
+    }
+}
