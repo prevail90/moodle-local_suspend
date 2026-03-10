@@ -42,9 +42,8 @@ The excluded course list shows how each excluded course would otherwise be proce
 - Certificate activities should have Moodle activity completion enabled, otherwise there is no completion signal for the prerequisite.
 - Excluded courses are skipped for both course completion and certificate completion events.
 
-## CI and releases
+## Releases
 
-- GitHub Actions can run the plugin PHPUnit suite against a disposable Moodle instance, so local Moodle setup is not required for routine verification.
 - The release workflow watches `version.php` on `main` and `master`, creates a tag from `$plugin->release`, and publishes a GitHub release automatically.
 - Release tagging is based on `$plugin->release`, for example `0.5.0` becomes tag `v0.5.0`.
 - Whether the GitHub release is published as stable or prerelease is based on `$plugin->maturity`.

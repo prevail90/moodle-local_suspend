@@ -31,9 +31,33 @@ jobs:
       - name: Read plugin version metadata
         id: meta
         run: |
-          RELEASE=$(php -r "preg_match(\"/\\\$plugin->release\\s*=\\s*'([^']+)'/\", file_get_contents('version.php'), \$m); echo \$m[1] ?? '';")
-          VERSION=$(php -r "preg_match('/\\\$plugin->version\\s*=\\s*([0-9]+)/', file_get_contents('version.php'), \$m); echo \$m[1] ?? '';")
-          MATURITY=$(php -r "preg_match('/\\\$plugin->maturity\\s*=\\s*(MATURITY_[A-Z]+)/', file_get_contents('version.php'), \$m); echo \$m[1] ?? '';")
+          while IFS='=' read -r key value; do
+            case "$key" in
+              release) RELEASE="$value" ;;
+              version) VERSION="$value" ;;
+              maturity) MATURITY="$value" ;;
+            esac
+          done < <(php <<'PHP'
+          <?php
+          define('MOODLE_INTERNAL', true);
+          define('MATURITY_ALPHA', 100);
+          define('MATURITY_BETA', 200);
+          define('MATURITY_RC', 300);
+          define('MATURITY_STABLE', 400);
+
+          $plugin = new stdClass();
+          require __DIR__ . '/version.php';
+
+          foreach (['release', 'version', 'maturity'] as $property) {
+              if (!isset($plugin->{$property})) {
+                  fwrite(STDERR, "Missing $property in version.php\n");
+                  exit(1);
+              }
+              echo $property . '=' . $plugin->{$property} . PHP_EOL;
+          }
+          PHP
+          )
+
           if [ -z "$RELEASE" ] || [ -z "$VERSION" ] || [ -z "$MATURITY" ]; then
             echo "Failed to parse version.php" >&2
             exit 1
@@ -41,7 +65,7 @@ jobs:
 
           TAG="v$RELEASE"
 
-          if [ "$MATURITY" = "MATURITY_STABLE" ]; then
+          if [ "$MATURITY" = "400" ] || [ "$MATURITY" = "MATURITY_STABLE" ]; then
             PRERELEASE=false
           else
             PRERELEASE=true
