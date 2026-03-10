@@ -28,4 +28,4 @@ $plugin->component = 'local_suspend';
 $plugin->version = 2026031101;
 $plugin->requires = 2022112800;
 $plugin->maturity = MATURITY_ALPHA;
-$plugin->release = '0.5.0';
+$plugin->release = '0.5.1';
