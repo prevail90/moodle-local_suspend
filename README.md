@@ -46,6 +46,9 @@ The excluded course list shows how each excluded course would otherwise be proce
 
 - The release workflow watches `version.php` on `main` and `master`, creates a tag from `$plugin->release`, and publishes a GitHub release automatically.
 - Release tagging is based on `$plugin->release`, for example `0.5.0` becomes tag `v0.5.0`.
+- Non-production releases must include a prerelease suffix in `$plugin->release`, for example `0.5.0-alpha`, `0.5.0-beta.3`, or `0.5.0-rc.1`.
+- Stable releases must use a plain version number such as `0.5.0`.
+- Release notes are generated from the commit subjects since the previous tag, so the release body reflects what changed or was fixed.
 - Whether the GitHub release is published as stable or prerelease is based on `$plugin->maturity`.
 - `MATURITY_STABLE` produces a normal release.
 - `MATURITY_ALPHA`, `MATURITY_BETA`, and `MATURITY_RC` produce GitHub prereleases.

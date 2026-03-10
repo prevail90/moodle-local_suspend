@@ -64,11 +64,23 @@ jobs:
           fi
 
           TAG="v$RELEASE"
+          HAS_PRERELEASE_SUFFIX=false
+          if [[ "$RELEASE" =~ -[0-9A-Za-z.-]+$ ]]; then
+            HAS_PRERELEASE_SUFFIX=true
+          fi
 
           if [ "$MATURITY" = "400" ] || [ "$MATURITY" = "MATURITY_STABLE" ]; then
             PRERELEASE=false
+            if [ "$HAS_PRERELEASE_SUFFIX" = true ]; then
+              echo "Stable releases must not include a prerelease suffix in \$plugin->release." >&2
+              exit 1
+            fi
           else
             PRERELEASE=true
+            if [ "$HAS_PRERELEASE_SUFFIX" = false ]; then
+              echo "Prereleases must include a suffix in \$plugin->release, for example 0.5.0-alpha or 0.5.0-beta.3." >&2
+              exit 1
+            fi
           fi
 
           echo "release=$RELEASE" >> "$GITHUB_OUTPUT"
@@ -93,15 +105,33 @@ jobs:
           git tag -a "${{ steps.meta.outputs.tag }}" -m "Release ${{ steps.meta.outputs.release }}"
           git push origin "${{ steps.meta.outputs.tag }}"
 
+      - name: Build release notes
+        id: notes
+        run: |
+          PREVIOUS_TAG=$(git tag --sort=-version:refname | grep -Fxv "${{ steps.meta.outputs.tag }}" | head -n 1)
+
+          {
+            echo "body<<EOF"
+            echo "Moodle plugin release \`${{ steps.meta.outputs.release }}\`."
+            echo
+            echo "Plugin build version: \`${{ steps.meta.outputs.version }}\`"
+            echo "Plugin maturity: \`${{ steps.meta.outputs.maturity }}\`"
+            echo
+            echo "## Changes"
+
+            if [ -n "$PREVIOUS_TAG" ]; then
+              git log --no-merges --pretty='- %s' "$PREVIOUS_TAG"..HEAD
+            else
+              git log --no-merges --pretty='- %s'
+            fi
+
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.meta.outputs.tag }}
-          generate_release_notes: true
           prerelease: ${{ steps.meta.outputs.prerelease == 'true' }}
           name: ${{ steps.meta.outputs.tag }}
-          body: |
-            Moodle plugin release `${{ steps.meta.outputs.release }}`.
-
-            Plugin build version: `${{ steps.meta.outputs.version }}`
-            Plugin maturity: `${{ steps.meta.outputs.maturity }}`
+          body: ${{ steps.notes.outputs.body }}
