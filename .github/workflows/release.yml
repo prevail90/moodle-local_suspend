@@ -1,0 +1,83 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - version.php
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+
+      - name: Read plugin version metadata
+        id: meta
+        run: |
+          RELEASE=$(php -r "preg_match(\"/\\\$plugin->release\\s*=\\s*'([^']+)'/\", file_get_contents('version.php'), \$m); echo \$m[1] ?? '';")
+          VERSION=$(php -r "preg_match('/\\\$plugin->version\\s*=\\s*([0-9]+)/', file_get_contents('version.php'), \$m); echo \$m[1] ?? '';")
+          MATURITY=$(php -r "preg_match('/\\\$plugin->maturity\\s*=\\s*(MATURITY_[A-Z]+)/', file_get_contents('version.php'), \$m); echo \$m[1] ?? '';")
+          if [ -z "$RELEASE" ] || [ -z "$VERSION" ] || [ -z "$MATURITY" ]; then
+            echo "Failed to parse version.php" >&2
+            exit 1
+          fi
+
+          TAG="v$RELEASE"
+
+          if [ "$MATURITY" = "MATURITY_STABLE" ]; then
+            PRERELEASE=false
+          else
+            PRERELEASE=true
+          fi
+
+          echo "release=$RELEASE" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "maturity=$MATURITY" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$PRERELEASE" >> "$GITHUB_OUTPUT"
+
+      - name: Create and push tag
+        run: |
+          if git rev-parse "${{ steps.meta.outputs.tag }}" >/dev/null 2>&1; then
+            echo "Tag ${{ steps.meta.outputs.tag }} already exists locally."
+          fi
+
+          if git ls-remote --tags origin "${{ steps.meta.outputs.tag }}" | grep -q "${{ steps.meta.outputs.tag }}"; then
+            echo "Tag ${{ steps.meta.outputs.tag }} already exists on origin."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ steps.meta.outputs.tag }}" -m "Release ${{ steps.meta.outputs.release }}"
+          git push origin "${{ steps.meta.outputs.tag }}"
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          generate_release_notes: true
+          prerelease: ${{ steps.meta.outputs.prerelease == 'true' }}
+          name: ${{ steps.meta.outputs.tag }}
+          body: |
+            Moodle plugin release `${{ steps.meta.outputs.release }}`.
+
+            Plugin build version: `${{ steps.meta.outputs.version }}`
+            Plugin maturity: `${{ steps.meta.outputs.maturity }}`

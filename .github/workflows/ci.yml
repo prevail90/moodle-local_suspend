@@ -1,0 +1,129 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  phpunit:
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MARIADB_DATABASE: moodle
+          MARIADB_USER: moodle
+          MARIADB_PASSWORD: moodle
+          MARIADB_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mariadb-admin ping -h127.0.0.1 -uroot -proot --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      MOODLE_BRANCH: MOODLE_500_STABLE
+      CUSTOMCERT_BRANCH: MOODLE_500_STABLE
+      MOODLE_DIR: ${{ github.workspace }}/moodle
+      MOODLEDATA_DIR: ${{ github.workspace }}/moodledata
+      PHPUNITDATA_DIR: ${{ github.workspace }}/moodledata_phpunit
+
+    steps:
+      - name: Checkout plugin
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+          coverage: none
+          extensions: >
+            curl, dom, fileinfo, gd, intl, mbstring, mysqli, opcache,
+            simplexml, soap, sodium, xml, xmlreader, xmlwriter, zip, zlib
+
+      - name: Clone Moodle
+        run: git clone --depth 1 --branch "$MOODLE_BRANCH" https://github.com/moodle/moodle.git "$MOODLE_DIR"
+
+      - name: Clone mod_customcert
+        run: git clone --depth 1 --branch "$CUSTOMCERT_BRANCH" https://github.com/mdjnelson/moodle-mod_customcert.git "$MOODLE_DIR/mod/customcert"
+
+      - name: Copy plugin into Moodle
+        run: |
+          mkdir -p "$MOODLE_DIR/local"
+          cp -a "$GITHUB_WORKSPACE" "$MOODLE_DIR/local/suspend"
+
+      - name: Prepare Moodle directories
+        run: |
+          mkdir -p "$MOODLEDATA_DIR" "$PHPUNITDATA_DIR"
+
+      - name: Install composer dependencies
+        working-directory: ${{ env.MOODLE_DIR }}
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Create config.php
+        working-directory: ${{ env.MOODLE_DIR }}
+        run: |
+          cat > config.php <<'PHP'
+          <?php
+          unset($CFG);
+          global $CFG;
+          $CFG = new stdClass();
+
+          $CFG->dbtype = 'mariadb';
+          $CFG->dblibrary = 'native';
+          $CFG->dbhost = '127.0.0.1';
+          $CFG->dbname = 'moodle';
+          $CFG->dbuser = 'moodle';
+          $CFG->dbpass = 'moodle';
+          $CFG->prefix = 'mdl_';
+          $CFG->dboptions = [
+              'dbpersist' => 0,
+              'dbport' => 3306,
+              'dbsocket' => '',
+              'dbcollation' => 'utf8mb4_unicode_ci',
+          ];
+
+          $CFG->wwwroot = 'http://127.0.0.1';
+          $CFG->dataroot = '__MOODLEDATA__';
+          $CFG->admin = 'admin';
+          $CFG->directorypermissions = 02777;
+          $CFG->phpunit_prefix = 'phpu_';
+          $CFG->phpunit_dataroot = '__PHPUNITDATA__';
+          $CFG->phpunit_directorypermissions = 02777;
+
+          require_once(__DIR__ . '/lib/setup.php');
+          PHP
+          sed -i "s|__MOODLEDATA__|$MOODLEDATA_DIR|g" config.php
+          sed -i "s|__PHPUNITDATA__|$PHPUNITDATA_DIR|g" config.php
+
+      - name: Install Moodle
+        working-directory: ${{ env.MOODLE_DIR }}
+        run: |
+          php admin/cli/install.php \
+            --lang=en \
+            --wwwroot=http://127.0.0.1 \
+            --dataroot="$MOODLEDATA_DIR" \
+            --dbtype=mariadb \
+            --dbhost=127.0.0.1 \
+            --dbname=moodle \
+            --dbuser=moodle \
+            --dbpass=moodle \
+            --fullname="Local Suspend CI" \
+            --shortname="lsci" \
+            --summary="Local suspend CI verification" \
+            --adminuser=admin \
+            --adminpass='Admin123!' \
+            --adminemail='admin@example.com' \
+            --non-interactive \
+            --agree-license
+
+      - name: Initialise PHPUnit
+        working-directory: ${{ env.MOODLE_DIR }}
+        run: php admin/tool/phpunit/cli/init.php
+
+      - name: Run local_suspend PHPUnit suite
+        working-directory: ${{ env.MOODLE_DIR }}
+        run: vendor/bin/phpunit local/suspend/tests/observer_test.php
