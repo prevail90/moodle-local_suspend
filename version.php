@@ -18,7 +18,7 @@
  * Plugin version details.
  *
  * @package    local_suspend
- * @copyright  2026
+ * @copyright  2026, OTA <otancoic@operatortraining.academy>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -27,5 +27,8 @@ defined('MOODLE_INTERNAL') || die();
 $plugin->component = 'local_suspend';
 $plugin->version = 2026031101;
 $plugin->requires = 2022112800;
-$plugin->maturity = RELEASE_CANDIDATE;
+//$plugin->maturity = MATURITY_ALPHA;
+//$plugin->maturity = MATURITY_BETA;
+$plugin->maturity = MATURITY_RC;
+//$plugin->maturity = MATURITY_STABLE;
 $plugin->release = '0.5.2';
