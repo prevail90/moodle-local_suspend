@@ -97,7 +97,6 @@ class observer {
      * @return bool
      */
     private static function has_completed_certificate_requirement(int $courseid, int $userid): bool {
-        $completion = new \completion_info(get_course($courseid));
         $modinfo = get_fast_modinfo($courseid, $userid);
         $foundcertificate = false;
 
@@ -108,12 +107,7 @@ class observer {
 
             $foundcertificate = true;
 
-            if ($completion->is_enabled($cm) === COMPLETION_TRACKING_NONE) {
-                continue;
-            }
-
-            $data = $completion->get_data($cm, false, $userid);
-            if ((int)$data->completionstate !== COMPLETION_INCOMPLETE) {
+            if (self::has_issued_certificate($cm, $userid)) {
                 return true;
             }
         }
@@ -137,6 +131,45 @@ class observer {
         ], 'timecompleted', IGNORE_MISSING);
 
         return !empty($completion->timecompleted);
+    }
+
+    /**
+     * Checks whether a supported certificate module has actually issued a certificate to the user.
+     *
+     * @param \cm_info $cm
+     * @param int $userid
+     * @return bool
+     */
+    private static function has_issued_certificate(\cm_info $cm, int $userid): bool {
+        global $DB;
+
+        $dbman = $DB->get_manager();
+
+        if ($cm->modname === 'customcert') {
+            $table = new \xmldb_table('customcert_issues');
+            if (!$dbman->table_exists($table)) {
+                return false;
+            }
+
+            return $DB->record_exists('customcert_issues', [
+                'customcertid' => $cm->instance,
+                'userid' => $userid,
+            ]);
+        }
+
+        if ($cm->modname === 'certificate') {
+            $table = new \xmldb_table('certificate_issues');
+            if (!$dbman->table_exists($table)) {
+                return false;
+            }
+
+            return $DB->record_exists('certificate_issues', [
+                'certificateid' => $cm->instance,
+                'userid' => $userid,
+            ]);
+        }
+
+        return false;
     }
 
     /**

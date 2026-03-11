@@ -145,6 +145,39 @@ final class observer_test extends \advanced_testcase {
         $this->assertSame(ENROL_USER_SUSPENDED, (int)$ue->status);
     }
 
+    public function test_completed_customcert_without_issue_keeps_enrolment_active(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course(['enablecompletion' => 1]);
+        $user = $generator->create_user();
+
+        $studentroleid = $DB->get_field('role', 'id', ['archetype' => 'student'], MUST_EXIST);
+        $generator->enrol_user($user->id, $course->id, $studentroleid, 'manual');
+        $instance = $this->get_manual_enrol_instance($course->id);
+
+        $customcert = $generator->create_module('customcert', [
+            'course' => $course->id,
+            'completion' => COMPLETION_TRACKING_AUTOMATIC,
+            'completionview' => 1,
+        ]);
+
+        $completionrecord = $this->create_course_completion_record($course->id, $user->id);
+        $this->trigger_course_completed_event($completionrecord);
+
+        $cm = get_coursemodule_from_instance('customcert', $customcert->id, $course->id, false, MUST_EXIST);
+        $completion = new \completion_info($course);
+        $completion->set_module_viewed($cm, $user->id);
+
+        $ue = $DB->get_record('user_enrolments', [
+            'enrolid' => $instance->id,
+            'userid' => $user->id,
+        ], '*', MUST_EXIST);
+        $this->assertSame(ENROL_USER_ACTIVE, (int)$ue->status);
+    }
+
     public function test_course_completion_with_incomplete_customcert_keeps_enrolment_active(): void {
         global $DB;
 

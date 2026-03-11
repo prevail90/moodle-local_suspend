@@ -5,8 +5,8 @@ Automatically suspends a student's enrolment in a course when the student comple
 ## Behaviour
 
 - Observes Moodle events `\\core\\event\\course_completed` and `\\core\\event\\course_module_completion_updated`.
-- If the course contains a supported certificate activity (`customcert` or `certificate`), suspension waits for that activity to be completed.
-- If the course completes first, suspension is deferred until the certificate activity is later completed.
+- If the course contains a supported certificate activity (`customcert` or `certificate`), suspension waits until a certificate has actually been issued for the user.
+- If the course completes first, suspension is deferred until the certificate activity later results in an issued certificate.
 - If the course has no certificate activity, suspension happens on course completion only.
 - Confirms the user holds a student-archetype role for that course, including inherited role assignments from parent contexts.
 - Suspends all active enrolments for that user in that course.
@@ -39,7 +39,7 @@ The excluded course list shows how each excluded course would otherwise be proce
 - This does not delete enrolments; it changes them to suspended.
 - If a user has multiple active enrolment methods in the same course, each is suspended.
 - The role check is based on the role archetype rather than a hard-coded shortname, so customized student role shortnames still work.
-- Certificate activities should have Moodle activity completion enabled, otherwise there is no completion signal for the prerequisite.
+- For supported certificate modules, the plugin checks for an issued certificate record rather than relying on module completion alone.
 - Excluded courses are skipped for both course completion and certificate completion events.
 
 ## Releases
