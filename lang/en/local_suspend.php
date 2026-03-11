@@ -23,8 +23,6 @@
  */
 
 $string['pluginname'] = 'Suspend completed students';
-$string['certificatecourses'] = 'Courses with certificate requirement';
-$string['coursecompletiononlycourses'] = 'Courses using course completion only';
 $string['courseid'] = 'Course ID';
 $string['courseshortname'] = 'Short name';
 $string['excludedcourses'] = 'Excluded courses';
@@ -32,12 +30,14 @@ $string['excludedcourses_help'] = 'Select the courses that should never be proce
 $string['excludedcoursescount'] = 'Excluded courses';
 $string['excludedcourselist'] = 'Excluded courses';
 $string['manageexclusions'] = 'Manage excluded courses';
-$string['manageexclusions_desc'] = 'Choose the courses that should never be processed by automatic suspension. The overview below shows how the plugin currently categorises courses.';
+$string['manageexclusions_desc'] = 'Choose the courses that should never be processed by automatic suspension.';
 $string['noexcludedcourses'] = 'No courses are currently excluded.';
 $string['overview'] = 'Overview';
-$string['processingmode'] = 'Would normally process as';
-$string['processingmode_certificate'] = 'Certificate completion required';
-$string['processingmode_completion'] = 'Course completion only';
-$string['privacy:metadata'] = 'The local_suspend plugin does not store any personal data.';
-$string['settingsintro'] = 'Use the management page to pick excluded courses with autocomplete and review how the plugin will process current courses.';
+$string['privacy:metadata:local_suspend_state'] = 'The local_suspend plugin stores suspension workflow signals for each user and course.';
+$string['privacy:metadata:local_suspend_state:courseid'] = 'The course where the suspension workflow is being tracked.';
+$string['privacy:metadata:local_suspend_state:userid'] = 'The user whose suspension workflow is being tracked.';
+$string['privacy:metadata:local_suspend_state:coursecompleted'] = 'Whether the course completion event has been observed.';
+$string['privacy:metadata:local_suspend_state:certificateissued'] = 'Whether a supported certificate issuance event has been observed.';
+$string['settingsintro'] = 'Use the management page to pick excluded courses with autocomplete.';
+$string['task:refreshcoursecertificatecache'] = 'Refresh supported certificate activity cache';
 $string['totalcourses'] = 'Total courses';

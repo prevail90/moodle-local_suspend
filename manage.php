@@ -53,14 +53,10 @@ echo html_writer::tag('p', get_string('manageexclusions_desc', 'local_suspend'))
 $summarytable = new html_table();
 $summarytable->head = [
     get_string('totalcourses', 'local_suspend'),
-    get_string('certificatecourses', 'local_suspend'),
-    get_string('coursecompletiononlycourses', 'local_suspend'),
     get_string('excludedcoursescount', 'local_suspend'),
 ];
 $summarytable->data[] = [
     $summary['totalcourses'],
-    $summary['certificatecourses'],
-    $summary['coursecompletiononly'],
     $summary['excludedcourses'],
 ];
 
@@ -79,18 +75,13 @@ if (!$excludedcourses) {
         get_string('courseid', 'local_suspend'),
         get_string('fullname'),
         get_string('courseshortname', 'local_suspend'),
-        get_string('processingmode', 'local_suspend'),
     ];
 
     foreach ($excludedcourses as $course) {
-        $mode = \local_suspend\manager::course_has_certificate_requirement((int)$course->id)
-            ? get_string('processingmode_certificate', 'local_suspend')
-            : get_string('processingmode_completion', 'local_suspend');
         $table->data[] = [
             $course->id,
             format_string($course->fullname),
             s($course->shortname),
-            $mode,
         ];
     }
 

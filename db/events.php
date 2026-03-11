@@ -32,8 +32,14 @@ $observers = [
         'priority' => 9999,
     ],
     [
-        'eventname' => '\\core\\event\\course_module_completion_updated',
-        'callback' => '\\local_suspend\\observer::course_module_completion_updated',
+        'eventname' => '\\mod_customcert\\event\\issue_created',
+        'callback' => '\\local_suspend\\observer::customcert_issue_created',
+        'includefile' => '/local/suspend/classes/observer.php',
+        'priority' => 9999,
+    ],
+    [
+        'eventname' => '\\mod_certificate\\event\\course_module_viewed',
+        'callback' => '\\local_suspend\\observer::certificate_course_module_viewed',
         'includefile' => '/local/suspend/classes/observer.php',
         'priority' => 9999,
     ],

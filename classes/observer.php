@@ -40,136 +40,76 @@ class observer {
             return;
         }
 
-        if (!self::has_completed_certificate_requirement($courseid, $userid)) {
+        if (!manager::course_uses_certificate_workflow($courseid)) {
+            self::suspend_course_enrolments_if_student($courseid, $userid);
+            return;
+        }
+
+        manager::mark_course_completed($courseid, $userid);
+
+        self::suspend_if_ready($courseid, $userid);
+    }
+
+    /**
+     * Suspends a completed student's enrolments when a custom certificate has been issued.
+     *
+     * @param \mod_customcert\event\issue_created $event
+     * @return void
+     */
+    public static function customcert_issue_created(\mod_customcert\event\issue_created $event): void {
+        $userid = (int)($event->relateduserid ?? $event->userid);
+        $cmid = (int)$event->contextinstanceid;
+
+        if (!$userid || !$cmid) {
+            return;
+        }
+
+        [, $cm] = get_course_and_cm_from_cmid($cmid);
+        if ($cm->modname !== 'customcert' || manager::is_course_excluded((int)$cm->course)) {
+            return;
+        }
+
+        manager::mark_certificate_issued((int)$cm->course, $userid);
+        self::suspend_if_ready((int)$cm->course, $userid);
+    }
+
+    /**
+     * Queues a deferred certificate issue check after the certificate module view flow completes.
+     *
+     * The legacy mod_certificate plugin issues the certificate after it triggers its view event,
+     * so the actual issue record has to be checked asynchronously.
+     *
+     * @param \mod_certificate\event\course_module_viewed $event
+     * @return void
+     */
+    public static function certificate_course_module_viewed(\mod_certificate\event\course_module_viewed $event): void {
+        $userid = (int)($event->relateduserid ?? $event->userid);
+        $cmid = (int)$event->contextinstanceid;
+
+        if (!$userid || !$cmid) {
+            return;
+        }
+
+        $task = new \local_suspend\task\process_certificate_view_task();
+        $task->set_component('local_suspend');
+        $task->set_custom_data([
+            'cmid' => $cmid,
+            'userid' => $userid,
+        ]);
+        \core\task\manager::queue_adhoc_task($task);
+    }
+
+    /**
+     * @param int $courseid
+     * @param int $userid
+     * @return void
+     */
+    public static function suspend_if_ready(int $courseid, int $userid): void {
+        if (!manager::is_ready_to_suspend($courseid, $userid)) {
             return;
         }
 
         self::suspend_course_enrolments_if_student($courseid, $userid);
-    }
-
-    /**
-     * Suspends a completed student's enrolments when a certificate module completion happens after course completion.
-     *
-     * @param \core\event\course_module_completion_updated $event
-     * @return void
-     */
-    public static function course_module_completion_updated(
-        \core\event\course_module_completion_updated $event
-    ): void {
-        global $DB;
-
-        $userid = (int)($event->relateduserid ?? 0);
-        $cmcid = (int)$event->objectid;
-
-        if (!$userid || !$cmcid) {
-            return;
-        }
-
-        $cmcompletion = $DB->get_record('course_modules_completion', ['id' => $cmcid]);
-        if (!$cmcompletion || (int)$cmcompletion->completionstate === COMPLETION_INCOMPLETE) {
-            return;
-        }
-
-        [, $cm] = get_course_and_cm_from_cmid($cmcompletion->coursemoduleid);
-        if (manager::is_course_excluded($cm->course) || !in_array($cm->modname, manager::CERTIFICATE_MODULES, true)) {
-            return;
-        }
-
-        if (!self::is_course_completed($cm->course, $userid)) {
-            return;
-        }
-
-        if (!self::has_completed_certificate_requirement($cm->course, $userid)) {
-            return;
-        }
-
-        self::suspend_course_enrolments_if_student($cm->course, $userid);
-    }
-
-    /**
-     * Checks whether the course has a completed certificate activity for the user.
-     *
-     * Courses without certificate modules keep the original behaviour.
-     * Certificate activities must have completion tracking enabled for the prerequisite to be meaningful.
-     *
-     * @param int $courseid
-     * @param int $userid
-     * @return bool
-     */
-    private static function has_completed_certificate_requirement(int $courseid, int $userid): bool {
-        $modinfo = get_fast_modinfo($courseid, $userid);
-        $foundcertificate = false;
-
-        foreach ($modinfo->get_cms() as $cm) {
-            if (!in_array($cm->modname, manager::CERTIFICATE_MODULES, true)) {
-                continue;
-            }
-
-            $foundcertificate = true;
-
-            if (self::has_issued_certificate($cm, $userid)) {
-                return true;
-            }
-        }
-
-        return !$foundcertificate;
-    }
-
-    /**
-     * Checks if the user has completed the course.
-     *
-     * @param int $courseid
-     * @param int $userid
-     * @return bool
-     */
-    private static function is_course_completed(int $courseid, int $userid): bool {
-        global $DB;
-
-        $completion = $DB->get_record('course_completions', [
-            'course' => $courseid,
-            'userid' => $userid,
-        ], 'timecompleted', IGNORE_MISSING);
-
-        return !empty($completion->timecompleted);
-    }
-
-    /**
-     * Checks whether a supported certificate module has actually issued a certificate to the user.
-     *
-     * @param \cm_info $cm
-     * @param int $userid
-     * @return bool
-     */
-    private static function has_issued_certificate(\cm_info $cm, int $userid): bool {
-        global $DB;
-
-        $dbman = $DB->get_manager();
-
-        if ($cm->modname === 'customcert') {
-            $table = new \xmldb_table('customcert_issues');
-            if (!$dbman->table_exists($table)) {
-                return false;
-            }
-
-            return $DB->record_exists('customcert_issues', [
-                'customcertid' => $cm->instance,
-                'userid' => $userid,
-            ]);
-        }
-
-        if ($cm->modname === 'certificate') {
-            $table = new \xmldb_table('certificate_issues');
-            if (!$dbman->table_exists($table)) {
-                return false;
-            }
-
-            return $DB->record_exists('certificate_issues', [
-                'certificateid' => $cm->instance,
-                'userid' => $userid,
-            ]);
-        }
-
-        return false;
     }
 
     /**
