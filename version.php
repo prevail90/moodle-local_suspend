@@ -25,10 +25,10 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_suspend';
-$plugin->version = 2026031200;
+$plugin->version = 2026031202;
 $plugin->requires = 2022112800;
 //$plugin->maturity = MATURITY_ALPHA;
 //$plugin->maturity = MATURITY_BETA;
 $plugin->maturity = MATURITY_RC;
 //$plugin->maturity = MATURITY_STABLE;
-$plugin->release = '0.5.3-rc.3';
+$plugin->release = '0.5.3-rc.5';

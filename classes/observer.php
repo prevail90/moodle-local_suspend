@@ -74,29 +74,35 @@ class observer {
     }
 
     /**
-     * Queues a deferred certificate issue check after the certificate module view flow completes.
+     * Suspends a completed student's enrolments when Certificate manager issues
+     * a course certificate for mod_coursecertificate.
      *
-     * The legacy mod_certificate plugin issues the certificate after it triggers its view event,
-     * so the actual issue record has to be checked asynchronously.
-     *
-     * @param \mod_certificate\event\course_module_viewed $event
+     * @param \tool_certificate\event\certificate_issued $event
      * @return void
      */
-    public static function certificate_course_module_viewed(\mod_certificate\event\course_module_viewed $event): void {
-        $userid = (int)($event->relateduserid ?? $event->userid);
-        $cmid = (int)$event->contextinstanceid;
+    public static function tool_certificate_issue_created(\tool_certificate\event\certificate_issued $event): void {
+        global $DB;
 
-        if (!$userid || !$cmid) {
+        $issueid = (int)$event->objectid;
+        if (!$issueid) {
             return;
         }
 
-        $task = new \local_suspend\task\process_certificate_view_task();
-        $task->set_component('local_suspend');
-        $task->set_custom_data([
-            'cmid' => $cmid,
-            'userid' => $userid,
-        ]);
-        \core\task\manager::queue_adhoc_task($task);
+        $issue = $DB->get_record('tool_certificate_issues', [
+            'id' => $issueid,
+        ], 'id, component, courseid, userid', IGNORE_MISSING);
+        if (!$issue || $issue->component !== 'mod_coursecertificate') {
+            return;
+        }
+
+        $courseid = (int)$issue->courseid;
+        $userid = (int)$issue->userid;
+        if (!$courseid || !$userid || manager::is_course_excluded($courseid)) {
+            return;
+        }
+
+        manager::mark_certificate_issued($courseid, $userid);
+        self::suspend_if_ready($courseid, $userid);
     }
 
     /**

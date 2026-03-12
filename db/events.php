@@ -38,8 +38,8 @@ $observers = [
         'priority' => 9999,
     ],
     [
-        'eventname' => '\\mod_certificate\\event\\course_module_viewed',
-        'callback' => '\\local_suspend\\observer::certificate_course_module_viewed',
+        'eventname' => '\\tool_certificate\\event\\certificate_issued',
+        'callback' => '\\local_suspend\\observer::tool_certificate_issue_created',
         'includefile' => '/local/suspend/classes/observer.php',
         'priority' => 9999,
     ],

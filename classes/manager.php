@@ -27,7 +27,7 @@ defined('MOODLE_INTERNAL') || die();
  */
 class manager {
     /** @var string[] Supported certificate activity module names. */
-    public const CERTIFICATE_MODULES = ['customcert', 'certificate'];
+    public const CERTIFICATE_MODULES = ['customcert', 'coursecertificate'];
 
     /**
      * Returns excluded course ids from plugin config.
