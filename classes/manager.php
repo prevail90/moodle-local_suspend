@@ -249,6 +249,25 @@ class manager {
     }
 
     /**
+     * Removes any stored suspension signals for the user and course.
+     *
+     * Once both signals have been consumed, retaining them can cause a later
+     * completion cycle to reuse a stale certificate-issued flag.
+     *
+     * @param int $courseid
+     * @param int $userid
+     * @return void
+     */
+    public static function clear_suspend_state(int $courseid, int $userid): void {
+        global $DB;
+
+        $DB->delete_records('local_suspend_state', [
+            'courseid' => $courseid,
+            'userid' => $userid,
+        ]);
+    }
+
+    /**
      * Upserts a suspension signal row.
      *
      * @param int $courseid

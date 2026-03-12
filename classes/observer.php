@@ -110,6 +110,7 @@ class observer {
         }
 
         self::suspend_course_enrolments_if_student($courseid, $userid);
+        manager::clear_suspend_state($courseid, $userid);
     }
 
     /**

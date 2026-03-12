@@ -309,6 +309,58 @@ final class observer_test extends \advanced_testcase {
         $this->assertSame(ENROL_USER_ACTIVE, (int)$ue->status);
     }
 
+    public function test_repeat_completion_after_prior_certificate_suspension_waits_for_new_issue(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course(['enablecompletion' => 1]);
+        $user = $generator->create_user();
+
+        $studentroleid = $DB->get_field('role', 'id', ['archetype' => 'student'], MUST_EXIST);
+        $generator->enrol_user($user->id, $course->id, $studentroleid, 'manual');
+        $instance = $this->get_manual_enrol_instance($course->id);
+
+        $customcert = $generator->create_module('customcert', [
+            'course' => $course->id,
+            'completion' => COMPLETION_TRACKING_AUTOMATIC,
+            'completionview' => 1,
+        ]);
+
+        $completionrecord = $this->create_course_completion_record($course->id, $user->id);
+        $this->trigger_course_completed_event($completionrecord);
+        \mod_customcert\certificate::issue_certificate($customcert->id, $user->id);
+
+        $ue = $DB->get_record('user_enrolments', [
+            'enrolid' => $instance->id,
+            'userid' => $user->id,
+        ], '*', MUST_EXIST);
+        $this->assertSame(ENROL_USER_SUSPENDED, (int)$ue->status);
+        $this->assertFalse($DB->record_exists('local_suspend_state', [
+            'courseid' => $course->id,
+            'userid' => $user->id,
+        ]));
+
+        $manualplugin = enrol_get_plugin('manual');
+        $manualplugin->update_user_enrol($instance, $user->id, ENROL_USER_ACTIVE);
+
+        $this->trigger_course_completed_event($completionrecord);
+
+        $ue = $DB->get_record('user_enrolments', [
+            'enrolid' => $instance->id,
+            'userid' => $user->id,
+        ], '*', MUST_EXIST);
+        $this->assertSame(ENROL_USER_ACTIVE, (int)$ue->status);
+
+        $state = $DB->get_record('local_suspend_state', [
+            'courseid' => $course->id,
+            'userid' => $user->id,
+        ], '*', MUST_EXIST);
+        $this->assertSame(1, (int)$state->coursecompleted);
+        $this->assertSame(0, (int)$state->certificateissued);
+    }
+
     private function get_manual_enrol_instance(int $courseid): \stdClass {
         global $DB;
 
