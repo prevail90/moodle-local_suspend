@@ -36,16 +36,17 @@ class observer {
         $courseid = (int)($event->courseid ?? ($event->other['courseid'] ?? 0));
         $userid = (int)($event->relateduserid ?? ($event->other['relateduserid'] ?? $event->userid));
 
-        if (!$courseid || !$userid || manager::is_course_excluded($courseid)) {
-            return;
-        }
-
-        if (!manager::course_uses_certificate_workflow($courseid)) {
-            self::suspend_course_enrolments_if_student($courseid, $userid);
+        if (!$courseid || !$userid || !manager::is_course_enabled($courseid)) {
             return;
         }
 
         manager::mark_course_completed($courseid, $userid);
+
+        if (!manager::course_waits_for_certificate($courseid)) {
+            self::suspend_course_enrolments_if_student($courseid, $userid);
+            manager::clear_suspend_state($courseid, $userid);
+            return;
+        }
 
         self::suspend_if_ready($courseid, $userid);
     }
@@ -65,7 +66,11 @@ class observer {
         }
 
         [, $cm] = get_course_and_cm_from_cmid($cmid);
-        if ($cm->modname !== 'customcert' || manager::is_course_excluded((int)$cm->course)) {
+        if ($cm->modname !== 'customcert' || !manager::is_course_enabled((int)$cm->course)) {
+            return;
+        }
+
+        if (!manager::course_waits_for_certificate((int)$cm->course)) {
             return;
         }
 
@@ -97,7 +102,11 @@ class observer {
 
         $courseid = (int)$issue->courseid;
         $userid = (int)$issue->userid;
-        if (!$courseid || !$userid || manager::is_course_excluded($courseid)) {
+        if (!$courseid || !$userid || !manager::is_course_enabled($courseid)) {
+            return;
+        }
+
+        if (!manager::course_waits_for_certificate($courseid)) {
             return;
         }
 

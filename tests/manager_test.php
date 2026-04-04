@@ -19,7 +19,7 @@ namespace local_suspend;
 defined('MOODLE_INTERNAL') || die();
 
 /**
- * Tests for course certificate activity caching.
+ * Tests for manager helpers.
  *
  * @package    local_suspend
  * @category   test
@@ -27,70 +27,65 @@ defined('MOODLE_INTERNAL') || die();
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  *
  * @covers \local_suspend\manager
- * @covers \local_suspend\task\refresh_course_certificate_cache_task
  */
 final class manager_test extends \advanced_testcase {
-    public function test_refresh_course_certificate_activity_cache_marks_supported_courses(): void {
-        global $DB;
-
+    public function test_completion_and_certificate_signals_make_user_ready_to_suspend(): void {
         $this->resetAfterTest();
 
-        $generator = $this->getDataGenerator();
-        $plaincourse = $generator->create_course();
-        $certcourse = $generator->create_course();
-        $generator->create_module('customcert', ['course' => $certcourse->id]);
+        manager::mark_course_completed(42, 7);
+        $this->assertFalse(manager::is_ready_to_suspend(42, 7));
 
-        manager::refresh_course_certificate_activity_cache();
-
-        $plaincache = $DB->get_record('local_suspend_course_cache', [
-            'courseid' => $plaincourse->id,
-        ], '*', MUST_EXIST);
-        $certcache = $DB->get_record('local_suspend_course_cache', [
-            'courseid' => $certcourse->id,
-        ], '*', MUST_EXIST);
-
-        $this->assertSame(0, (int)$plaincache->hascertificateactivity);
-        $this->assertSame(1, (int)$certcache->hascertificateactivity);
+        manager::mark_certificate_issued(42, 7);
+        $this->assertTrue(manager::is_ready_to_suspend(42, 7));
     }
 
-    public function test_refresh_course_certificate_activity_cache_removes_stale_rows(): void {
+    public function test_clear_suspend_state_removes_existing_signals(): void {
         global $DB;
 
         $this->resetAfterTest();
 
-        $generator = $this->getDataGenerator();
-        $course = $generator->create_course();
+        manager::mark_course_completed(42, 7);
+        manager::mark_certificate_issued(42, 7);
 
-        $DB->insert_record('local_suspend_course_cache', (object)[
-            'courseid' => 999999,
-            'hascertificateactivity' => 1,
-            'timecreated' => time(),
-            'timemodified' => time(),
-        ]);
+        $this->assertTrue($DB->record_exists('local_suspend_state', [
+            'courseid' => 42,
+            'userid' => 7,
+        ]));
 
-        manager::refresh_course_certificate_activity_cache([$course->id]);
-        $this->assertTrue($DB->record_exists('local_suspend_course_cache', ['courseid' => 999999]));
+        manager::clear_suspend_state(42, 7);
 
-        manager::refresh_course_certificate_activity_cache();
-        $this->assertFalse($DB->record_exists('local_suspend_course_cache', ['courseid' => 999999]));
+        $this->assertFalse($DB->record_exists('local_suspend_state', [
+            'courseid' => 42,
+            'userid' => 7,
+        ]));
     }
 
-    public function test_scheduled_task_refreshes_course_certificate_activity_cache(): void {
-        global $DB;
-
+    public function test_disabled_course_settings_opt_the_course_out(): void {
         $this->resetAfterTest();
 
-        $generator = $this->getDataGenerator();
-        $course = $generator->create_course();
-        $generator->create_module('customcert', ['course' => $course->id]);
+        manager::set_course_settings(42, false, true);
 
-        $task = new \local_suspend\task\refresh_course_certificate_cache_task();
-        $task->execute();
+        $this->assertFalse(manager::is_course_enabled(42));
+        $this->assertTrue(manager::course_waits_for_certificate(42));
+    }
 
-        $cache = $DB->get_record('local_suspend_course_cache', [
-            'courseid' => $course->id,
-        ], '*', MUST_EXIST);
+    public function test_course_settings_default_to_enabled_and_waiting_for_certificate(): void {
+        $this->resetAfterTest();
 
-        $this->assertSame(1, (int)$cache->hascertificateactivity);
+        $this->assertSame([
+            'enabled' => true,
+            'waitforcertificate' => true,
+        ], manager::get_course_settings(42));
+    }
+
+    public function test_set_course_settings_persists_non_default_values(): void {
+        $this->resetAfterTest();
+
+        manager::set_course_settings(42, false, false);
+
+        $this->assertSame([
+            'enabled' => false,
+            'waitforcertificate' => false,
+        ], manager::get_course_settings(42));
     }
 }

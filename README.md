@@ -1,13 +1,13 @@
 # local_suspend
 
-Automatically suspends a student's enrolment in a course when the course is completed, with certificate-aware handling for courses that use supported certificate activities.
+Automatically suspends a student's enrolment in a course after course completion, with optional waiting for certificate issuance on a per-course basis.
 
 ## Behaviour
 
 - Observes the Moodle course completion event and certificate issuance flows.
-- Maintains a scheduled per-course cache of whether supported certificate activities exist, so repeated student completions do not keep rechecking the same course structure.
-- If a course does not contain a supported certificate activity, suspension happens on course completion alone.
-- If a course contains `customcert` or `coursecertificate`, suspension waits until both course completion and certificate issuance have been seen for the same user and course.
+- Each course can be opted out individually from its own suspension settings page.
+- By default, suspension waits until both course completion and certificate issuance have been seen for the same user and course.
+- A course can be configured to suspend immediately on course completion instead of waiting for the certificate event.
 - `customcert` is handled from its dedicated `\\mod_customcert\\event\\issue_created` event.
 - `coursecertificate` is handled from the Certificate manager event `\\tool_certificate\\event\\certificate_issued`, filtered to issues created for `mod_coursecertificate`.
 - Confirms the user holds a student-archetype role for that course, including inherited role assignments from parent contexts.
@@ -20,28 +20,22 @@ Automatically suspends a student's enrolment in a course when the course is comp
 
 ## Settings
 
-- Go to Site administration > Plugins > Local plugins > Manage excluded courses.
-- Use the course autocomplete to choose excluded courses instead of entering raw IDs.
-- The management page shows a small overview of total and excluded courses.
+- Go to a course and open `Course administration > Suspension settings` to control behavior for that course.
+- Use the course page to opt a course out completely or to disable the certificate wait requirement.
 
-## Scheduled task
+## Course workflow
 
-- The plugin includes a scheduled task that refreshes a per-course cache for `customcert` and `coursecertificate` activities every 15 minutes.
-- Course completion handling reads that cache first, which avoids repeating the same module lookup for every student finishing the same course.
-
-## Admin workflow
-
-1. Open `Manage excluded courses`.
-2. Review the overview table.
-3. Add or remove excluded courses using the autocomplete field.
-4. Save changes.
+1. Open a course and choose `Suspension settings`.
+2. Decide whether the course is enabled and whether it should wait for certificate issuance.
+3. Save changes.
 
 ## Notes
 
 - This does not delete enrolments; it changes them to suspended.
 - If a user has multiple active enrolment methods in the same course, each is suspended.
 - The role check is based on the role archetype rather than a hard-coded shortname, so customized student role shortnames still work.
-- Excluded courses are skipped for both course completion and certificate issuance handling.
+- If a course is configured to wait for a certificate and no certificate issue is observed, the enrolment stays active.
+- Disabled courses are skipped for both course completion and certificate issuance handling.
 
 ## Releases
 

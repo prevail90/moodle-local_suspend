@@ -14,33 +14,39 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace local_suspend\task;
+namespace local_suspend\form;
 
 defined('MOODLE_INTERNAL') || die();
 
+require_once($CFG->libdir . '/formslib.php');
+
 /**
- * Refreshes the per-course certificate activity cache used by completion handling.
+ * Form for course-level suspension settings.
  *
  * @package    local_suspend
  * @copyright  2026
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class refresh_course_certificate_cache_task extends \core\task\scheduled_task {
+class course_settings_form extends \moodleform {
     /**
-     * Returns the task display name.
-     *
-     * @return string
-     */
-    public function get_name(): string {
-        return get_string('task:refreshcoursecertificatecache', 'local_suspend');
-    }
-
-    /**
-     * Executes the scheduled cache refresh.
+     * Form definition.
      *
      * @return void
      */
-    public function execute(): void {
-        \local_suspend\manager::refresh_course_certificate_activity_cache();
+    public function definition(): void {
+        $mform = $this->_form;
+
+        $mform->addElement('advcheckbox', 'enabled',
+            get_string('coursesettings:enabled', 'local_suspend')
+        );
+        $mform->addHelpButton('enabled', 'coursesettings:enabled', 'local_suspend');
+
+        $mform->addElement('advcheckbox', 'waitforcertificate',
+            get_string('coursesettings:waitforcertificate', 'local_suspend')
+        );
+        $mform->addHelpButton('waitforcertificate', 'coursesettings:waitforcertificate', 'local_suspend');
+        $mform->disabledIf('waitforcertificate', 'enabled', 'notchecked');
+
+        $this->add_action_buttons(false, get_string('savechanges'));
     }
 }
